@@ -1,2 +1,2 @@
-distribution-server/target
-python-worker/__pycache__
+target/
+__pycache__/
