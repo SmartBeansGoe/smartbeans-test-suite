@@ -33,6 +33,7 @@ struct Submission {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct SmartResponse {
+    score: u32,
     result_type: SmartResult,
     runs: u32,
     errors: u32,
@@ -45,10 +46,12 @@ impl SmartResponse {
     fn update(mut self) -> Self {
         if self.result_type != SmartResult::EvaluationError
             && self.result_type != SmartResult::TimedOut
+            && self.result_type != SmartResult::ParsingError
             && self.result_type != SmartResult::UnknownError
         {
             if self.errors == 0 && self.failures == 0 {
                 self.result_type = SmartResult::Success;
+                self.score = 1;
             } else {
                 self.result_type = SmartResult::Failed
             }
@@ -73,22 +76,17 @@ impl SmartResponse {
                     feedback = "EVALUATION_ERROR means that there is a server side error.\n\"The test script is corrupted.\"".to_string();
                 }
                 _ => {
-                    if output.stdout.len() > 0 {
-                        result_type = SmartResult::ParsingError;
-                        feedback = "ParsingError: The output of the test script is not as expected.".to_string();    
-                    }
-                    else {
-                        result_type = SmartResult::UnknownError;
-                        feedback = "UnknownError".to_string();
-                    }
+                    result_type = SmartResult::UnknownError;
+                    feedback = "UnknownError".to_string();
                 }
             };
             SmartResponse {
+                score: 0,
                 result_type: result_type,
                 runs: 0,
                 errors: 0,
                 failures: 0,
-                feedback: feedback,            
+                feedback: feedback,
             }
         }).update();
         res
