@@ -26,28 +26,27 @@ fn evaluate(lang: String, submission: String) -> String {
 }
 
 fn evaluate_python(submission: String) -> String {
-    let client_address = WORKER_IDLING.lock().unwrap().pop();
-    if let Some(client_address) = client_address {
-        WORKER_RUNNING.lock().unwrap().push(client_address.clone());
+    let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop();
+    if let Some(container) = container {
+        WORKER_RUNNING.lock().unwrap().push(container.clone());
         let client = reqwest::blocking::Client::new();
         let res = client
-            .post(client_address.clone().ip().to_string() + "/evaluate")
+            .post(format!(
+                "http://{}:8080/evaluate",
+                container.clone().ip().to_string()
+            ))
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(submission.clone())
             .send();
 
         if res.is_err() {
-            println!(
-                "Connection failed to worker: {}",
-                client_address.clone().ip()
-            );
-            WORKER_NO_CONNECTION
-                .lock()
-                .unwrap()
-                .push(client_address.clone());
+            println!("Connection failed to worker: {}", container.clone().ip());
+
+            WORKER_NO_CONNECTION.lock().unwrap().push(container.clone());
             WORKER_RUNNING
                 .lock()
                 .unwrap()
-                .retain(|x| x.ip() != client_address.clone().ip());
+                .retain(|x| x.ip() != container.clone().ip());
             return evaluate_python(submission);
         }
 
@@ -55,9 +54,9 @@ fn evaluate_python(submission: String) -> String {
         WORKER_RUNNING
             .lock()
             .unwrap()
-            .retain(|x| x.ip() != client_address.clone().ip());
+            .retain(|x| x.ip() != container.clone().ip());
 
-        WORKER_IDLING.lock().unwrap().push(client_address.clone());
+        WORKER_IDLING.lock().unwrap().push(container.clone());
         if res.status().is_success() {
             return format!("{}", res.text().unwrap());
         } else {
@@ -78,11 +77,12 @@ fn main() {
         let parent_lxc = worker::Worker::load("parent-tester");
         parent_lxc.stop();
         for i in 0..min_worker {
-            let new_worker = parent_lxc.copy(format!("child-tester-{:02}", i+1).as_str()); // TODO: needs a check for already existing and handling it
-            // TODO: make snapshot
+            let new_worker = parent_lxc.copy(format!("child-tester-{:02}", i + 1).as_str()); // TODO: needs a check for already existing and handling it
+                                                                                             // TODO: make snapshot
+            new_worker.start();
             let millis = Duration::from_millis(500);
             thread::sleep(millis);
-            new_worker.start();
+            WORKER_IDLING.lock().unwrap().push(new_worker);
         }
     });
 
