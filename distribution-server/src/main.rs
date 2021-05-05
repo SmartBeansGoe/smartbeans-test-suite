@@ -5,14 +5,33 @@ extern crate rocket;
 #[macro_use]
 extern crate lazy_static;
 
+use lxd::Location;
 use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::thread;
 use std::time::Duration;
 
+
+
 lazy_static! {
     static ref WORKER_IDLING: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
-    static ref WORKER_RUNNING: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
-    static ref WORKER_NO_CONNECTION: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
+    static ref WORKER_RESET: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
+    static ref RESET_FLAG: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+    static ref WORKER_RESET_THREAD: thread::JoinHandle<()> = thread::spawn(|| {
+        while !RESET_FLAG.load(Ordering::Acquire) {
+            thread::park();
+            while WORKER_RESET.lock().unwrap().len() > 0 {
+                let container: worker::Worker = WORKER_RESET.lock().unwrap().pop().unwrap();
+                container.restore("snap0");
+                WORKER_IDLING.lock().unwrap().push(container);
+            }
+        }
+    });
+
+
 }
 
 mod worker;
@@ -28,35 +47,19 @@ fn evaluate(lang: String, submission: String) -> String {
 fn evaluate_python(submission: String) -> String {
     let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop();
     if let Some(container) = container {
-        WORKER_RUNNING.lock().unwrap().push(container.clone());
         let client = reqwest::blocking::Client::new();
+        let ip = container.ipv4().to_string();
         let res = client
-            .post(format!(
-                "http://{}:8080/evaluate",
-                container.clone().ip().to_string()
-            ))
+            .post(format!("http://{}:8080/evaluate", ip))
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(submission.clone())
             .send();
 
-        if res.is_err() {
-            println!("Connection failed to worker: {}", container.clone().ip());
-
-            WORKER_NO_CONNECTION.lock().unwrap().push(container.clone());
-            WORKER_RUNNING
-                .lock()
-                .unwrap()
-                .retain(|x| x.ip() != container.clone().ip());
-            return evaluate_python(submission);
-        }
-
         let res = res.unwrap();
-        WORKER_RUNNING
-            .lock()
-            .unwrap()
-            .retain(|x| x.ip() != container.clone().ip());
 
-        WORKER_IDLING.lock().unwrap().push(container.clone());
+        WORKER_RESET.lock().unwrap().push(container);
+        WORKER_RESET_THREAD.thread().unpark();
+
         if res.status().is_success() {
             return format!("{}", res.text().unwrap());
         } else {
@@ -70,18 +73,18 @@ fn evaluate_python(submission: String) -> String {
 }
 
 fn main() {
-    let min_worker = 4u32;
-    let max_worker = 16u32;
+    let num_worker = 16u32;
+
     let init = thread::spawn(move || {
-        //let parent_lxc = worker::Worker::from_image("python-tester-image", "parent-tester");
-        let parent_lxc = worker::Worker::load("parent-tester");
-        parent_lxc.stop();
-        for i in 0..min_worker {
-            let new_worker = parent_lxc.copy(format!("child-tester-{:02}", i + 1).as_str()); // TODO: needs a check for already existing and handling it
-                                                                                             // TODO: make snapshot
-            new_worker.start();
-            let millis = Duration::from_millis(500);
-            thread::sleep(millis);
+        for i in 0..num_worker {
+            let new_worker = worker::Worker::new(
+                Location::Local,
+                format!("child-tester-{:02}", i + 1).as_str(),
+                "python-tester",
+                "tester"
+            );
+            new_worker.profile("tester");
+            new_worker.snapshot("snap0");
             WORKER_IDLING.lock().unwrap().push(new_worker);
         }
     });
@@ -89,4 +92,5 @@ fn main() {
     init.join().unwrap();
 
     rocket::ignite().mount("/", routes![evaluate]).launch();
+    WORKER_RESET_THREAD.join().unwrap();
 }
