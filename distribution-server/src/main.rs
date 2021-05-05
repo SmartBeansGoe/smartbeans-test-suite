@@ -81,7 +81,6 @@ fn main() {
                 Location::Local,
                 format!("child-tester-{:02}", i + 1).as_str(),
                 "python-tester",
-                "tester"
             );
             new_worker.profile("tester");
             new_worker.snapshot("snap0");
@@ -92,5 +91,5 @@ fn main() {
     init.join().unwrap();
 
     rocket::ignite().mount("/", routes![evaluate]).launch();
-    WORKER_RESET_THREAD.join().unwrap();
+    //WORKER_RESET_THREAD.join().unwrap();
 }

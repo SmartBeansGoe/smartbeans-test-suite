@@ -11,7 +11,7 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(location: Location, name: &str, base: &str, profile: &str) -> Worker {
+    pub fn new(location: Location, name: &str, base: &str) -> Worker {
         let container = Container::new(location, name, base).unwrap();
         Worker {
             container: container,
@@ -35,24 +35,24 @@ impl Worker {
         Command::new("lxc")
             .args(&["profile", "remove", self.container.name(), "default"])
             .status()
-            .expect(format!("Error when removing default profile"));
+            .expect("Error when removing default profile");
         Command::new("lxc")
             .args(&["profile", "assign", self.container.name(), name])
             .status()
-            .expect(format!("Error when assigning {} profile", name));
+            .expect(format!("Error when assigning {} profile", name).as_str());
     }
 
     pub fn snapshot(&self, name: &str) {
         Command::new("lxc")
             .args(&["snapshot", self.container.name(), name])
             .status()
-            .expect(format!("Error when creating snapshot {}", name));
+            .expect(format!("Error when creating snapshot {}", name).as_str());
     }
 
     pub fn restore(&self, snapshot: &str) {
         Command::new("lxc")
             .args(&["restore", self.container.name(), snapshot])
             .status()
-            .expect(format!("Error when restoring snapshot {}", snapshot));
+            .expect(format!("Error when restoring snapshot {}", snapshot).as_str());
     }
 }
