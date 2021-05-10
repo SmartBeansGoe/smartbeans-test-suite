@@ -24,7 +24,7 @@ enum SmartResult {
     TimedOut,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Submission {
     source_code: String,
     tests: String,
