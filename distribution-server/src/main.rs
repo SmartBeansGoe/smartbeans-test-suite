@@ -14,7 +14,16 @@ use std::sync::{
 use std::thread;
 use std::time::Duration;
 
+use rocket_contrib::json::Json;
+use serde::Deserialize;
+use serde::Serialize;
 
+#[derive(Debug, Deserialize, Serialize)]
+struct Submission {
+    source_code: String,
+    tests: String,
+    timeout: String,
+}
 
 lazy_static! {
     static ref WORKER_IDLING: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
@@ -37,14 +46,14 @@ lazy_static! {
 mod worker;
 
 #[post("/evaluate/<lang>", format = "application/json", data = "<submission>")]
-fn evaluate(lang: String, submission: String) -> String {
+fn evaluate(lang: String, submission: Json<Submission>) -> String {
     match lang.to_lowercase().as_ref() {
         "python" => evaluate_python(submission),
         _ => format!("Could not find test suite for language: {}", lang),
     }
 }
 
-fn evaluate_python(submission: String) -> String {
+fn evaluate_python(submission: Json<Submission>) -> String {
     let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop();
     if let Some(container) = container {
         let client = reqwest::blocking::Client::new();
@@ -52,7 +61,7 @@ fn evaluate_python(submission: String) -> String {
         let res = client
             .post(format!("http://{}:8080/evaluate", ip))
             .header(reqwest::header::CONTENT_TYPE, "application/json")
-            .body(submission.clone())
+            .body(format!("{:?}", submission).to_string())
             .send();
 
         let res = res.unwrap();
