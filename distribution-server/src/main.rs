@@ -59,7 +59,7 @@ fn evaluate_python(submission: Json<Submission>) -> String {
         let client = reqwest::blocking::Client::new();
         let ip = container.ipv4().to_string();
         let res = client
-            .post(format!("http://{}:8080/evaluate", ip))
+            .post(format!("http://{}:8000/evaluate", ip))
             .header(reqwest::header::CONTENT_TYPE, "application/json")
             .body(format!("{:?}", submission).to_string())
             .send();
@@ -91,7 +91,7 @@ fn main() {
                 format!("child-tester-{:02}", i + 1).as_str(),
                 "python-tester",
             );
-            new_worker.profile("tester");
+            //new_worker.profile("tester");
             new_worker.snapshot("snap0");
             WORKER_IDLING.lock().unwrap().push(new_worker);
         }
