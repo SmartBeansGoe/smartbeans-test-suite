@@ -13,7 +13,7 @@ pub struct Worker {
 impl Worker {
     pub fn new(location: Location, name: &str, base: &str) -> Worker {
         Command::new("lxc")
-            .args(&["destroy", "--force", &name])
+            .args(&["delete", "--force", &name])
             .status()
             .expect(format!("Err during destroying container: {}", &name).as_str());
         let container =
