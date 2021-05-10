@@ -17,7 +17,7 @@ impl Worker {
             .status()
             .expect(format!("Err during destroying container: {}", &name).as_str());
         let container =
-            Container::new(location, name, base, Some(true), None, Some("lxdbr0"), None).unwrap();
+            Container::new(location, name, base, Some(true), Some("lxdbr0"), Some("tester"), None).unwrap();
         Worker {
             container: container,
         }
