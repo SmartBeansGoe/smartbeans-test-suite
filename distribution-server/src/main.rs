@@ -48,20 +48,20 @@ mod worker;
 #[post("/evaluate/<lang>", format = "application/json", data = "<submission>")]
 fn evaluate(lang: String, submission: Json<Submission>) -> String {
     match lang.to_lowercase().as_ref() {
-        "python" => evaluate_python(submission),
+        "python" => evaluate_python(submission.into_inner()),
         _ => format!("Could not find test suite for language: {}", lang),
     }
 }
 
-fn evaluate_python(submission: Json<Submission>) -> String {
+fn evaluate_python(submission: Submission) -> String {
     let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop();
     if let Some(container) = container {
         let client = reqwest::blocking::Client::new();
         let ip = container.ipv4().to_string();
         let res = client
             .post(format!("http://{}:8000/evaluate", ip))
-            .header(reqwest::header::CONTENT_TYPE, "application/json")
-            .body(format!("{:?}", submission).to_string())
+            .header(reqwest::header::CONTENT_TYPE, "json")
+            .json(&submission)
             .send();
 
         let res = res.unwrap();
