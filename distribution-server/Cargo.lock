@@ -680,8 +680,7 @@ dependencies = [
 [[package]]
 name = "lxd"
 version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4fe96f45f82a61311d1f4ce43c9da6e2facdf59479c4571aadb3b1f1663431d"
+source = "git+https://github.com/oleuml/lxd-rs#401f5dcbeddfa238ad5acf77880e81ce2073548d"
 dependencies = [
  "serde",
  "serde_derive",

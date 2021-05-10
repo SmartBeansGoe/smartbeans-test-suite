@@ -12,7 +12,12 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(location: Location, name: &str, base: &str) -> Worker {
-        let container = Container::new(location, name, base).unwrap();
+        Command::new("lxc")
+            .args(&["destroy", "--force", &name])
+            .status()
+            .expect(format!("Err during destroying container: {}", &name).as_str());
+        let container =
+            Container::new(location, name, base, Some(true), None, Some("lxdbr0"), None).unwrap();
         Worker {
             container: container,
         }
