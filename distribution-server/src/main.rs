@@ -39,8 +39,6 @@ lazy_static! {
             }
         }
     });
-
-
 }
 
 mod worker;
@@ -60,7 +58,7 @@ fn evaluate_python(submission: Submission) -> String {
         let ip = container.ipv4().to_string();
         let res = client
             .post(format!("http://{}:8000/evaluate", ip))
-            .header(reqwest::header::CONTENT_TYPE, "json")
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
             .json(&submission)
             .send();
 
@@ -68,6 +66,8 @@ fn evaluate_python(submission: Submission) -> String {
 
         WORKER_RESET.lock().unwrap().push(container);
         WORKER_RESET_THREAD.thread().unpark();
+
+        println!("{:?}", res);
 
         if res.status().is_success() {
             return format!("{}", res.text().unwrap());

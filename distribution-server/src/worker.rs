@@ -16,8 +16,16 @@ impl Worker {
             .args(&["delete", "--force", &name])
             .status()
             .expect(format!("Err during destroying container: {}", &name).as_str());
-        let container =
-            Container::new(location, name, base, Some(true), Some("lxdbr0"), Some("tester"), None).unwrap();
+        let container = Container::new(
+            location,
+            name,
+            base,
+            Some(true),
+            Some("lxdbr0"),
+            Some("tester"),
+            None,
+        )
+        .unwrap();
         Worker {
             container: container,
         }
@@ -59,5 +67,21 @@ impl Worker {
             .args(&["restore", self.container.name(), snapshot])
             .status()
             .expect(format!("Error when restoring snapshot {}", snapshot).as_str());
+        // Hack to wait for network up and running
+
+        Command::new("lxc")
+            .args(&[
+                "exec",
+                self.container.name(),
+                "--mode=non-interactive",
+                "-n",
+                "--",
+                "dhclient",
+            ])
+            .status()
+            .expect(format!(
+                "dhcclient of {} is not working",
+                self.container.name()
+            ));
     }
 }
