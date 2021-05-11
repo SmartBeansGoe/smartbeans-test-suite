@@ -82,6 +82,6 @@ impl Worker {
             .expect(format!(
                 "dhcclient of {} is not working",
                 self.container.name()
-            ));
+            ).as_str());
     }
 }
