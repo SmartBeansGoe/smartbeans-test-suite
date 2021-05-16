@@ -27,6 +27,7 @@ lazy_static! {
             while WORKER_RESET.lock().unwrap().len() > 0 {
                 let container: worker::Worker = WORKER_RESET.lock().unwrap().pop().unwrap();
                 container.restore("snap0");
+                container.profile("tester");
                 WORKER_IDLING.lock().unwrap().push(container);
             }
         }
@@ -75,8 +76,8 @@ fn evaluate_python(submission: SmartSubmission) -> String {
             });
         }
     } else {
-        let ten_millis = Duration::from_millis(500);
-        thread::sleep(ten_millis);
+        let waiting_time = Duration::from_millis(500);
+        thread::sleep(waiting_time);
         return evaluate_python(submission);
     }
 }
