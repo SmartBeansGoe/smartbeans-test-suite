@@ -66,14 +66,14 @@ fn evaluate_python(submission: SmartSubmission) -> String {
         if res.status().is_success() {
             return format!("{}", res.text().unwrap());
         } else {
-            return format!("{}", SmartResponse {
+            return serde_json::to_string(&SmartResponse {
                 result_type: SmartResult::ContainerError,
                 errors: 0,
                 failures: 0,
                 runs: 0,
                 score: 0,
                 feedback: format!("ContainerError: The container \"{}\" which was contacted, was not reachable under the IP.", container_name)
-            });
+            }).unwrap();
         }
     } else {
         let waiting_time = Duration::from_millis(500);
