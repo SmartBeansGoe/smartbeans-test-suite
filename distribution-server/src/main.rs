@@ -46,6 +46,7 @@ fn evaluate(lang: String, submission: Json<SmartSubmission>) -> String {
 fn evaluate_python(submission: SmartSubmission) -> String {
     let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop();
     if let Some(container) = container {
+        let container_name = container.container.name().to_string();
         let client = reqwest::blocking::Client::new();
         let ip = container.ipv4().to_string();
         let res = client
@@ -64,7 +65,14 @@ fn evaluate_python(submission: SmartSubmission) -> String {
         if res.status().is_success() {
             return format!("{}", res.text().unwrap());
         } else {
-            return format!("404");
+            return format!("{}", SmartResponse {
+                result_type: SmartResult::ContainerError,
+                errors: 0,
+                failures: 0,
+                runs: 0,
+                score: 0,
+                feedback: format!("ContainerError: The container \"{}\" which was contacted, was not reachable under the IP.", container_name)
+            });
         }
     } else {
         let ten_millis = Duration::from_millis(500);
