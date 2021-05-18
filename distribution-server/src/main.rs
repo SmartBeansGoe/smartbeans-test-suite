@@ -11,6 +11,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
+use std::collections::VecDeque;
 use std::thread;
 use std::time::Duration;
 
@@ -18,7 +19,7 @@ use rocket_contrib::json::Json;
 use smart::{SmartResponse, SmartResult, SmartSubmission};
 
 lazy_static! {
-    static ref WORKER_IDLING: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
+    static ref WORKER_IDLING: Mutex<VecDeque<worker::Worker>> = Mutex::new(vec![]);
     static ref WORKER_RESET: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
     static ref RESET_FLAG: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref WORKER_RESET_THREAD: thread::JoinHandle<()> = thread::spawn(|| {
@@ -28,7 +29,7 @@ lazy_static! {
                 let container: worker::Worker = WORKER_RESET.lock().unwrap().pop().unwrap();
                 container.restore("snap0");
                 container.profile("tester");
-                WORKER_IDLING.lock().unwrap().push(container);
+                WORKER_IDLING.lock().unwrap().push_back(container);
             }
         }
     });
@@ -45,7 +46,7 @@ fn evaluate(lang: String, submission: Json<SmartSubmission>) -> String {
 }
 
 fn evaluate_python(submission: SmartSubmission) -> String {
-    let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop();
+    let container: Option<worker::Worker> = WORKER_IDLING.lock().unwrap().pop_front();
     if let Some(container) = container {
         let container_name = container.container.name().to_string();
         let client = reqwest::blocking::Client::new();
@@ -97,7 +98,7 @@ fn main() {
             );
             //new_worker.profile("tester");
             new_worker.snapshot("snap0");
-            WORKER_IDLING.lock().unwrap().push(new_worker);
+            WORKER_IDLING.lock().unwrap().push_back(new_worker);
         }
     });
 
