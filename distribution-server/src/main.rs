@@ -19,7 +19,7 @@ use rocket_contrib::json::Json;
 use smart::{SmartResponse, SmartResult, SmartSubmission};
 
 lazy_static! {
-    static ref WORKER_IDLING: Mutex<VecDeque<worker::Worker>> = Mutex::new(vec![]);
+    static ref WORKER_IDLING: Mutex<VecDeque<worker::Worker>> = Mutex::new(VecDeque::new());
     static ref WORKER_RESET: Mutex<Vec<worker::Worker>> = Mutex::new(vec![]);
     static ref RESET_FLAG: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
     static ref WORKER_RESET_THREAD: thread::JoinHandle<()> = thread::spawn(|| {
