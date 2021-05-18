@@ -83,7 +83,10 @@ fn evaluate_python(submission: SmartSubmission) -> String {
 }
 
 fn main() {
-    let num_worker = 16u32;
+    // Load environment variables from .env
+    dotenv::dotenv().ok();
+    
+    let num_worker = std::env::var("NUM_WORKER").unwrap().parse::<u32>().unwrap();
 
     let init = thread::spawn(move || {
         for i in 0..num_worker {
