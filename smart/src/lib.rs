@@ -69,7 +69,7 @@ impl SmartResponse {
             match output.status.code() {
                 Some(124) => {
                     result_type = SmartResult::TimedOut;
-                    feedback ="TimedOut: The test takes to long.".to_string();
+                    feedback ="TimedOut: The program takes to long.".to_string();
                 },
                 Some(1) => {
                     result_type = SmartResult::EvaluationError;
