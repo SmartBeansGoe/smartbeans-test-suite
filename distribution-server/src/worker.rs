@@ -33,13 +33,9 @@ impl Worker {
 
     pub fn ipv4(&self) -> Ipv4Addr {
         let ip_call = Command::new("lxc")
-            .args(&["exec", self.container.name(), "-- hostname -I"])
+            .args(&["exec", self.container.name(), "--", "hostname", "-I"])
             .output()
             .unwrap();
-        // let info = Command::new("lxc")
-        //     .args(&["info", self.container.name()])
-        //     .output()
-        //     .unwrap();
 
         let ip_output = String::from_utf8(ip_call.stdout).unwrap();
         let regex = Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap();
