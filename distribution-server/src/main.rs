@@ -89,7 +89,7 @@ fn main() {
     
     let num_worker = std::env::var("NUM_WORKER").unwrap().parse::<u32>().unwrap();
 
-    let init = thread::spawn(move || {
+    thread::spawn(move || {
         for i in 0..num_worker {
             let new_worker = worker::Worker::new(
                 Location::Local,
@@ -101,8 +101,6 @@ fn main() {
             WORKER_IDLING.lock().unwrap().push_back(new_worker);
         }
     });
-
-    init.join().unwrap();
 
     rocket::ignite().mount("/", routes![evaluate]).launch();
     //WORKER_RESET_THREAD.join().unwrap();
