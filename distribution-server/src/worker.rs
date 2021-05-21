@@ -32,15 +32,19 @@ impl Worker {
     }
 
     pub fn ipv4(&self) -> Ipv4Addr {
-        let info = Command::new("lxc")
-            .args(&["info", self.container.name()])
+        let ip_call = Command::new("lxc")
+            .args(&["exec", self.container.name(), "-- hostname -I"])
             .output()
             .unwrap();
+        // let info = Command::new("lxc")
+        //     .args(&["info", self.container.name()])
+        //     .output()
+        //     .unwrap();
 
-        let ip = String::from_utf8(info.stdout).unwrap();
-        let re = Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap();
-        let caps = re.captures(&ip).unwrap();
-        let ip = caps.get(0).unwrap().as_str();
+        let ip_output = String::from_utf8(ip_call.stdout).unwrap();
+        let regex = Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap();
+        let captures = regex.captures(&ip_output).unwrap();
+        let ip = captures.get(0).unwrap().as_str();
         Ipv4Addr::from_str(&ip).unwrap()
     }
 
@@ -67,8 +71,7 @@ impl Worker {
             .args(&["restore", self.container.name(), snapshot])
             .status()
             .expect(format!("Error when restoring snapshot {}", snapshot).as_str());
-        // Hack to wait for network up and running
-
+        // Hack to wait for network up and running: Laeuft bisher auch nicht so richtig.
         Command::new("lxc")
             .args(&[
                 "exec",
@@ -79,9 +82,8 @@ impl Worker {
                 "dhclient",
             ])
             .status()
-            .expect(format!(
-                "dhcclient of {} is not working",
-                self.container.name()
-            ).as_str());
+            .expect(format!("dhcclient of {} is not working", self.container.name()).as_str());
+        // TODO: Check needed for systemd service/tester rocket server started in container
+        // Vielleicht in dem man eine Testanfrage an diesen schickt.
     }
 }
