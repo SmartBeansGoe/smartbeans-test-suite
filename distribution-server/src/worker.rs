@@ -21,7 +21,7 @@ impl Worker {
             name,
             base,
             Some(true),
-            Some("lxdbr0"),
+            None,
             Some("tester"),
             None,
         )
